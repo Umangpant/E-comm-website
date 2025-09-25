@@ -100,3 +100,182 @@ VALUES
 (3, 'Fortuner', 'A description of the Fortuner', 'Toyota', 35000.25, 'SUV', '2019-07-22', true, 3),
 (4, 'Swift', 'A description of the Swift', 'Maruti Suzuki', 7500.00, 'Hatchback', '2022-09-05', true, 10),
 (5, 'Creta', 'A description of the Creta', 'Hyundai', 12000.75, 'SUV', '2021-11-30', true, 6);          
+
+
+
+    //todays controller service and model
+    package com.ecom_project.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api")
+@CrossOrigion     //this will prevent the cors error  the both the frontend and backend 
+public class ProductController {
+     @Autowire
+    private Service service;
+
+    @GetMapping("/products")  //our url works as http://localhost:8080/api/products
+    public ResponseEntity<List<Product>> getAllProducts(){
+        return new ResponseEntity<>(service.getAllProducts(), HttpStatus.OK); //lets us also set the HTTP status code (like 200 OK, 201 CREATED, 404 NOT FOUND), headers, and the body of the response. This is crucial for building a proper REST API that can communicate success or failure to the client.
+    }
+@GetMapping("/products/{pathId}")
+public ResponseEntity<Product> getProductById(@PathVariable int pathId) {
+    Product product = service.getProductById(pathId);
+    if (product != null) {
+        return new ResponseEntity<>(product, HttpStatus.OK);
+    } else {
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+}
+@PostMapping("/product")
+public ResponseEntity<?> addProduct(@RequestPart Product product,@RequestPart MultipartFile imageFile){
+   try{ Product product1 = service.addProduct(product,imageFile);
+    return new ResponseEntity<>(product1,HttpStatus.CREATED);
+
+   }
+   catch(Exception e){
+    return new ResponseEntity<>(e.getMessage,HttpStatus.INTERNAL_SERVER_ERROR);
+
+   }
+
+}
+@GetMapping("/product/{productId}/image")
+public ResponseEntity<byte[]> getImageByProductId(@PathVariable int productId){
+    Product product = service.getProductById(productId);
+    byte[] imageFile = product.getImageData();
+    return ResponseEntity.ok().contentType(MediaType.valueOf(product.getImageType()))
+    .body(imageFile);
+
+}
+@PutMapping("/product/${prodId}")
+public ResponseEntity<String> update(@PathVariable int prodId,@RequestPart Product product,@RequestPart MultipartFile imageFile){
+    try{
+        Product product = service.update(prodId, product, imageFile);
+       
+    }
+    catch(Exception e){
+         return new ResponseEntity<>("FAILED TO UPDATE" , HttpStatus.BAD_REQUEST);
+    }
+        if (product != null) {
+        return new ResponseEntity<>("UPDATED", HttpStatus.OK);
+    } else {
+        return new ResponseEntity<>("FAILED TO UPDATE" , HttpStatus.BAD_REQUEST);
+    }
+}
+     @DeleteMapping("/product/{id}")
+       public ResponseEntity<String> delete(@PathVariable int pathId){
+        Product product = service.update(prodId, product, imageFile);
+          if (product != null) {
+            return service.delete(id);
+        return new ResponseEntity<>("deleted", HttpStatus.OK);
+    } else {
+        return new ResponseEntity<>("FAILED TO delete" , HttpStatus.BAD_REQUEST);
+    }
+       }
+       @GetMapping("/products/search")
+       public ResponseEntity<List<Product>> searchProducts( @RequestParam string keyword){
+        System.out.println("searching with" + keyword);
+        list<Product> products = service.searchProducts(keyword);
+        return new ResponseEntity<>(products,HttpStatus OK);
+       
+       }
+}
+}
+
+
+
+package com.ecom_project.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.util.Date;
+@Entity            // this annotation is provided by hibernate orm mean the class name you provide is the table name  
+@Data                 // these all three annotation is used to reduce the boiler plate using lombak dependency so we don have to create constructor of arg and non arg type and also their getter setter 
+@AllArgsConstructor
+@NoArgsConstructor
+public class Product {
+    @Id    //this will make id primary key
+    @GeneratedValue(strategy = GenerationType.IDENTITY)  //TO AUTO GENERATE ID 1,2,...
+private int id;
+private String name;
+private String desc;
+private String brand;
+private BitDecimal price;
+private String category;
+@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy") // JACKSON LIB annotation used to convert Java objects to JSON (serialization) and JSON to Java objects (deserialization).and also to enforce some data format like we are doing here as dd mm yyyy
+
+private Date releaseDate;
+private boolean available;
+private int quantity;
+private String imageName;
+private String imageType;
+@Lob
+private byte[] imageData;
+
+
+}
+package com.ecom_project.repository; 
+
+import com.ecom_project.model.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+@Repository
+public interface ProductRepo extends JpaRepository<Product,Integer> {
+@Query("SELECT p FROM Product p WHERE " +
+   "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+   "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+   "LOWER(p.brand) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+   "LOWER(p.category) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+List<Product> searchProducts(String keyword);
+
+}
+
+
+
+package com.ecom_project.service;
+
+import com.ecom_project.model.Product;
+import com.ecom_project.repository.ProductRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.*;
+@Service
+import model.Product;
+public class ProductService {
+    @Autowired
+    private ProductRepo repo;
+public List<Product> getAllProducts(){
+   return repo.findAll();   //directly fetch data from repo 
+}
+public Product getProductById(int prodId){
+    return repo.findById(prodId)orElse(null);
+}
+public Product addProduct(Product product , MultipartFile imageFile){ throws IOException
+    product.setImageName(imageFile.getOrigionalFilename());
+    product.setImageType(imageFile.getContentType());
+    product.setImageDate(imageFile.getBytes());
+   return repo.save(product);// to save to data
+}
+public Product update(int prodId, Product product,MultipartFile imageFile){
+    product.setImageDate(imageFile.getBytes());    //these all are setting the data and image entered by user
+    Product.setImageName(imageFile.getOrigionalFilename());
+    Product.setImageType(imageFile.getContentType());
+    return repo.save(product);
+}
+
+public void delete(int prodId){
+      return repo.deleteById(id);
+}
+  public List<Product> searchProducts(  string keyword){
+     return repo.searchProducts(keyword);
+  }
