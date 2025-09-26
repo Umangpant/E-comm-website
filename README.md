@@ -279,3 +279,105 @@ public void delete(int prodId){
   public List<Product> searchProducts(  string keyword){
      return repo.searchProducts(keyword);
   }
+
+
+
+
+
+
+FOR SPRING SECURITY 
+sECURITYcONFIG.Data  under config package 
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+ @Bean
+ public SecurityFilterChain SecurityFilterChain(HttpSecurity http) throws Exeption{
+    http.csrf(customizer -> customizer.disable());
+    http.authorizeHttpRequests(request -> request.anyRequest().authenticated());
+    //http.formLogin(Customizer.withDefaults());
+    http.httpBasic(Customizer.withDefaults());
+    http.sessionManagement(session -> session.sessionCreationPolicy(sessionCreationPolicy.STATELESS));
+    return http.build();
+ }
+
+}
+
+  CLASSES controllers
+  public class ProjectController {
+    @RestController
+    @RequestMapping("/")
+    public String greet(HttpServletRequest request){
+        System.out.print("hi this is a security project" + request.getSession().getId());
+        }
+
+}
+public class Student {
+   private int id;
+private String name;
+private int marks;
+public  Student(int id, String name, int marks){
+    this.id = id;
+    this.name = name;
+    this.marks = marks;
+}
+
+// Getter and Setter for id
+public int getId() {
+    return id;
+}
+
+public void setId(int id) {
+    this.id = id;
+}
+
+// Getter and Setter for name
+public String getName() {
+    return name;
+}
+
+public void setName(String name) {
+    this.name = name;
+}
+
+// Getter and Setter for marks
+public int getMarks() {
+    return marks;
+}
+
+public void setMarks(int marks) {
+    this.marks = marks;
+}
+@Override
+public String toString() {
+    return "YourClassName{" +
+           "id=" + id +
+           ", name='" + name + '\'' +
+           ", marks=" + marks +
+           '}';
+
+
+}
+@RestController
+public class StudentController {
+  private List<Student> Students = new ArrayList<>(List.of(
+         new Student(id:1, name:"kartik", marks:80),
+         new Student(id:2, name:"Kiran", marks:86)
+  ));
+  @GetMapping("/students")
+    public List<Student> getStudents(){
+        return Students;
+    }
+     @GetMapping("/csrf-token")
+    public CsrfToken getCsrfToken(HttpServletRequest request){
+        return (CsrfToken) request.getAttribute("_csrf");
+            
+    }
+@PostMapping("/students")
+public Student add(@RequestBody Student student){
+    return students.add(student);
+}
+
+}
+
+
+  
